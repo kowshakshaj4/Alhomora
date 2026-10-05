@@ -629,8 +629,10 @@ def load_user_data(user_id):
     if analysis:
         try:
             st.session_state.jd_analysis = json.loads(analysis["analysis_json"] or "{}")
+            st.session_state.career_profile = st.session_state.jd_analysis.get("career_profile", {}) or {}
         except json.JSONDecodeError:
             st.session_state.jd_analysis = {}
+            st.session_state.career_profile = {}
     if progress:
         st.session_state.career_streak = int(progress["career_streak"] or 1)
         st.session_state.career_xp = int(progress["career_xp"] or 120)
@@ -909,7 +911,14 @@ def render_auth_styles(background_data):
             .alhomora-auth-background {{ background-position: 35% center; }}
             .alhomora-auth-right-column {{ max-width: 560px !important; }}
         }}
-    </style>
+    
+@media (max-width: 768px) {{
+    .alhomora-auth-background {{
+        background-size: auto 100% !important;
+        background-position: 30% center !important;
+    }}
+}}
+</style>
     """)
 
 
@@ -1080,6 +1089,7 @@ defaults = {
     "target_role": "",
     "job_description": "",
     "jd_analysis": {},
+    "career_profile": {},
 
     # Interview
     "interview_mode": "Text",
@@ -1481,6 +1491,156 @@ audio {
     width: 100%;
 }
 
+
+/* =========================================================
+   MOBILE RESPONSIVE LAYOUT
+   Keeps the desktop design intact while stacking content
+   cleanly on phones and narrow screens.
+   ========================================================= */
+
+@media (max-width: 768px) {
+
+    .block-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 1rem 0.75rem 3rem !important;
+        margin: 0 !important;
+    }
+
+    /* Stack Streamlit columns on narrow screens */
+    div[data-testid="stHorizontalBlock"] {
+        flex-wrap: wrap !important;
+        gap: 0.75rem !important;
+    }
+
+    div[data-testid="stColumn"] {
+        width: 100% !important;
+        min-width: 100% !important;
+        flex: 1 1 100% !important;
+    }
+
+    /* Main hero */
+    .hero {
+        padding: 22px 18px !important;
+        margin-bottom: 20px !important;
+        border-radius: 18px !important;
+    }
+
+    .hero-small {
+        font-size: 10px !important;
+        letter-spacing: 1px !important;
+        margin-bottom: 8px !important;
+    }
+
+    .hero-title {
+        font-size: 27px !important;
+        line-height: 1.2 !important;
+        margin-bottom: 10px !important;
+    }
+
+    .hero-text {
+        font-size: 13px !important;
+        line-height: 1.55 !important;
+    }
+
+    /* Section headings */
+    .section-title {
+        font-size: 20px !important;
+        margin-top: 20px !important;
+        margin-bottom: 12px !important;
+    }
+
+    /* Cards */
+    .app-card {
+        padding: 17px !important;
+        border-radius: 15px !important;
+        margin-bottom: 13px !important;
+    }
+
+    .card-title {
+        font-size: 16px !important;
+    }
+
+    .card-text {
+        font-size: 13px !important;
+        line-height: 1.55 !important;
+    }
+
+    /* Dashboard metrics */
+    .metric {
+        padding: 16px !important;
+        min-height: 92px !important;
+        border-radius: 15px !important;
+    }
+
+    .metric-title {
+        font-size: 12px !important;
+    }
+
+    .metric-value {
+        font-size: 24px !important;
+        margin-top: 6px !important;
+    }
+
+    .metric-subtitle {
+        font-size: 11px !important;
+    }
+
+    /* Interview / question areas */
+    .question-box {
+        padding: 18px !important;
+        border-radius: 15px !important;
+    }
+
+    /* Streamlit controls */
+    .stButton > button {
+        min-height: 44px !important;
+        font-size: 14px !important;
+        padding: 8px 12px !important;
+        white-space: normal !important;
+    }
+
+    .stTextInput input,
+    .stTextArea textarea {
+        font-size: 16px !important;
+    }
+
+    [data-testid="stFileUploader"] {
+        padding: 8px !important;
+        border-radius: 13px !important;
+    }
+
+    /* Keep charts and wide elements inside the phone viewport */
+    [data-testid="stPlotlyChart"],
+    [data-testid="stDataFrame"],
+    .stDataFrame,
+    iframe {
+        max-width: 100% !important;
+    }
+
+    /* Compact the sidebar when it is opened on a phone */
+    [data-testid="stSidebar"] {
+        width: min(86vw, 320px) !important;
+    }
+
+    .sidebar-brand {
+        font-size: 21px !important;
+    }
+
+    .sidebar-subtitle {
+        font-size: 12px !important;
+    }
+
+    .sidebar-streak {
+        padding: 14px !important;
+        margin-top: 16px !important;
+    }
+
+    .sidebar-streak-value {
+        font-size: 24px !important;
+    }
+}
+
 </style>
 """)
 
@@ -1603,24 +1763,150 @@ def local_resume_analysis(resume_text, target_role, job_description):
             "projects": projects,
             "education": education
         },
+        "career_profile": {
+            "profession": target_role or "Target Professional Role",
+            "summary": f"A professional career profile focused on {target_role or "the target role"}.",
+            "core_skills": matching[:10] or ["Role-specific fundamentals", "Professional communication"],
+            "tools": [],
+            "knowledge_areas": ["Role-specific fundamentals", "Problem solving", "Professional best practices"],
+            "responsibilities": [f"Perform responsibilities expected of a {target_role or "professional"}.", "Apply role-specific knowledge to practical problems."],
+            "interview_focus": ["Role knowledge", "Resume experience", "Problem solving", "Professional communication"],
+            "career_challenges": ["Analyze a realistic problem in the target role.", "Choose an appropriate professional approach."]
+        },
         "source": "local_fallback"
     }
 
 
 def local_first_question(target_role, resume_text):
-    role = (target_role or "software").lower()
-    if "data" in role:
-        return "Tell me about a data analysis or machine learning project you have worked on. What problem did you solve and how did you evaluate the result?"
-    if "web" in role or "software" in role or "developer" in role:
-        return "Walk me through a project where you built or improved a software application. What technical decision are you most confident about?"
-    if "civil" in role:
-        return "Describe a civil engineering project or design task you have worked on and explain one important engineering decision you made."
-    if "mechanical" in role:
-        return "Describe a mechanical engineering project or design task you have worked on and explain one engineering trade-off you considered."
-    if "ai" in role or "ml" in role or "machine" in role:
-        return "Choose one AI or machine learning project from your resume. What problem did it solve, and why did you choose the approach you used?"
-    return "Tell me about the project or experience on your resume that best prepares you for this role. What did you personally contribute?"
+    role = (target_role or "the target role").strip()
+    resume_hint = (resume_text or "").strip()
+    if resume_hint:
+        return f"Tell me about the experience or project in your resume that is most relevant to working as a {role}. What did you do, and what result did you achieve?"
+    return f"What are the most important skills or responsibilities you would expect in a {role}, and how would you demonstrate them in a real workplace situation?"
 
+
+def generate_career_challenges(target_role, resume_text, job_description, career_profile, challenge_type):
+    role = (target_role or "the target professional role").strip()
+    profile_text = json.dumps(career_profile or {}, ensure_ascii=False)[:7000]
+    resume_excerpt = (resume_text or "")[:9000]
+    jd_excerpt = (job_description or "")[:7000]
+
+    prompt = f"""
+You are the career challenge engine for Alhomora, an AI career platform.
+Create a short, useful challenge for ANY professional occupation. Do not assume the user is in technology.
+
+TARGET ROLE:
+{role}
+
+CAREER PROFILE:
+{profile_text}
+
+RESUME:
+{resume_excerpt}
+
+JOB DESCRIPTION:
+{jd_excerpt or "Not provided"}
+
+CHALLENGE TYPE:
+{challenge_type}
+
+Create exactly 5 multiple-choice questions. Every question must be directly relevant to the target profession and, where possible, connect to the candidate's resume or job description.
+Avoid generic Python, coding, or computer-science questions unless the target role actually requires them. For non-technical careers, use realistic professional knowledge, decisions, calculations, workflows, ethics, communication, tools, or workplace scenarios appropriate to that profession.
+
+Return ONLY valid JSON in this exact structure:
+{{
+  "questions": [
+    {{"q": "", "options": ["", "", "", ""], "answer": 0, "why": ""}}
+  ]
+}}
+
+Rules:
+- answer must be the zero-based index of the correct option.
+- exactly 4 options per question.
+- explanations must be concise and useful.
+- do not invent qualifications or experience for the candidate.
+"""
+
+    ai_output = call_gemini(prompt)
+    if ai_output:
+        try:
+            data = clean_json(ai_output)
+            questions = data.get("questions", [])
+            valid = []
+            for q in questions:
+                options = q.get("options", [])
+                answer = q.get("answer", 0)
+                if q.get("q") and len(options) == 4 and isinstance(answer, int) and 0 <= answer < 4:
+                    valid.append({
+                        "q": str(q["q"]),
+                        "options": [str(x) for x in options],
+                        "answer": answer,
+                        "why": str(q.get("why", "Correct reasoning is based on the target profession."))
+                    })
+            if len(valid) >= 3:
+                return valid[:5]
+        except Exception:
+            pass
+
+    # Safe fallback. It stays relevant to the typed profession without pretending
+    # to know a fixed catalogue of occupations.
+    return [
+        {
+            "q": f"Which approach best demonstrates professional competence as a {role}?",
+            "options": [
+                "Use the relevant professional standards and evidence to make the decision",
+                "Choose the fastest option without checking requirements",
+                "Ignore the available information",
+                "Wait for someone else to make every decision"
+            ],
+            "answer": 0,
+            "why": f"Professional decisions in {role} should be based on relevant standards, evidence and context."
+        },
+        {
+            "q": f"You encounter an unfamiliar problem in a {role} position. What is the strongest first step?",
+            "options": [
+                "Clarify the problem, gather relevant information and identify constraints",
+                "Guess and proceed immediately",
+                "Ignore the issue",
+                "Change the subject"
+            ],
+            "answer": 0,
+            "why": "Good professional problem solving starts with understanding the situation and constraints."
+        },
+        {
+            "q": f"Which behavior is most valuable when working professionally as a {role}?",
+            "options": [
+                "Communicate clearly, document important decisions and take responsibility",
+                "Hide mistakes",
+                "Avoid asking questions",
+                "Only focus on speed"
+            ],
+            "answer": 0,
+            "why": "Clear communication, accountability and documentation are transferable professional skills."
+        },
+        {
+            "q": f"How should you respond when a task for a {role} requires a skill you do not yet have?",
+            "options": [
+                "Identify the gap, learn the required fundamentals and practice with a relevant task",
+                "Claim the skill without learning it",
+                "Ignore the requirement",
+                "Remove the task from consideration"
+            ],
+            "answer": 0,
+            "why": "A practical learn-and-apply loop is safer and more useful than pretending to have a skill."
+        },
+        {
+            "q": f"What is a strong way to demonstrate readiness for a {role} opportunity?",
+            "options": [
+                "Connect your resume evidence to the role's responsibilities and explain your decisions clearly",
+                "List unrelated skills",
+                "Memorize a job title only",
+                "Avoid discussing your actual experience"
+            ],
+            "answer": 0,
+            "why": "Relevant evidence and clear reasoning show how your experience connects to the role."
+        }
+    ]
 
 def local_answer_evaluation(question, answer, target_role):
     words = re.findall(r"\b\w+\b", answer or "")
@@ -2008,8 +2294,11 @@ elif st.session_state.page == "Resume Intelligence":
 
             try:
 
+                # Keep the original PDF bytes so Gemini can read image-based/scanned resumes too.
+                pdf_bytes = uploaded_file.getvalue()
+
                 pdf = pymupdf.open(
-                    stream=uploaded_file.read(),
+                    stream=pdf_bytes,
                     filetype="pdf"
                 )
 
@@ -2019,6 +2308,16 @@ elif st.session_state.page == "Resume Intelligence":
                     resume_text += page.get_text()
 
                 pdf.close()
+
+                # Some resumes are image-only PDFs, so PyMuPDF returns no text.
+                # Gemini can understand the original PDF directly in that case.
+                image_only_resume = not resume_text.strip()
+
+                if image_only_resume:
+                    resume_text = (
+                        f"Image-based resume uploaded for {target_role}. "
+                        "Detailed text extraction is delegated to Gemini document understanding."
+                    )
 
                 st.session_state.resume_text = resume_text
                 st.session_state.resume_name = uploaded_file.name
@@ -2059,6 +2358,16 @@ Return ONLY valid JSON:
     "strengths": [],
     "improvements": [],
     "summary": "",
+    "career_profile": {{
+        "profession": "",
+        "summary": "",
+        "core_skills": [],
+        "tools": [],
+        "knowledge_areas": [],
+        "responsibilities": [],
+        "interview_focus": [],
+        "career_challenges": []
+    }},
     "radar": {{
         "technical": 0,
         "communication": 0,
@@ -2073,13 +2382,42 @@ Important:
 - It is not an official ATS score.
 - Do not invent resume information.
 - Scores must be 0 to 100.
+- If an image-based resume is supplied, read the visible resume content carefully.
+- When asked for extracted_resume_text, include the important text needed for interview questions.
 """
 
-                ai_output = call_gemini(prompt)
+                # For scanned/image-only PDFs, send the original document to Gemini
+                # instead of sending an empty extracted-text field.
+                if image_only_resume and client is not None:
+                    document_input = [
+                        {
+                            "type": "document",
+                            "data": base64.b64encode(pdf_bytes).decode("utf-8"),
+                            "mime_type": "application/pdf"
+                        },
+                        {
+                            "type": "text",
+                            "text": prompt + "\n\nThis is an image-based PDF. Read the visible text from the document directly. Also return an additional JSON field called \"extracted_resume_text\" containing the important resume text you read, so the interview feature can use it."
+                        }
+                    ]
+                    ai_output = call_gemini(prompt, input_payload=document_input)
+                else:
+                    ai_output = call_gemini(prompt)
 
                 if ai_output:
                     try:
                         analysis = clean_json(ai_output)
+
+                        # Gemini may return extracted text for image-only resumes.
+                        extracted_resume_text = analysis.pop("extracted_resume_text", "")
+                        if extracted_resume_text.strip():
+                            st.session_state.resume_text = extracted_resume_text.strip()
+                            # Store the extracted text as the resume content for future interview/roadmap use.
+                            save_resume(
+                                st.session_state.user_id,
+                                uploaded_file.name,
+                                st.session_state.resume_text
+                            )
                     except Exception:
                         analysis = local_resume_analysis(
                             resume_text, target_role, job_description
@@ -2092,6 +2430,16 @@ Important:
                     st.info("Local analysis mode is active. Your resume was saved and can still be used for the roadmap and interview tools.")
 
                 st.session_state.jd_analysis = analysis
+                st.session_state.career_profile = analysis.get("career_profile", {}) or {
+                    "profession": target_role,
+                    "summary": f"Career profile for {target_role}.",
+                    "core_skills": analysis.get("matching_skills", []),
+                    "tools": [],
+                    "knowledge_areas": analysis.get("missing_skills", []),
+                    "responsibilities": [],
+                    "interview_focus": analysis.get("matching_skills", []),
+                    "career_challenges": []
+                }
                 save_resume_analysis(
                     st.session_state.user_id,
                     st.session_state.get("resume_id"),
@@ -2440,6 +2788,12 @@ You are conducting a professional mock interview.
 Target role:
 {selected_role}
 
+Career profile:
+{json.dumps(st.session_state.get("career_profile", {}), ensure_ascii=False)[:6000]}
+
+Job description:
+{st.session_state.job_description[:6000] or "Not provided"}
+
 Candidate resume:
 {st.session_state.resume_text[:12000]}
 
@@ -2533,6 +2887,12 @@ You are an expert AI interview evaluator.
 
 Target role:
 {selected_role}
+
+Career profile:
+{json.dumps(st.session_state.get("career_profile", {}), ensure_ascii=False)[:6000]}
+
+Job description:
+{st.session_state.job_description[:6000] or "Not provided"}
 
 Question:
 {st.session_state.interview_question}
@@ -2668,6 +3028,12 @@ Analyze this candidate's recorded voice answer.
 
 Target role:
 {selected_role}
+
+Career profile:
+{json.dumps(st.session_state.get("career_profile", {}), ensure_ascii=False)[:6000]}
+
+Job description:
+{st.session_state.job_description[:6000] or "Not provided"}
 
 Interview question:
 {st.session_state.interview_question}
@@ -2901,6 +3267,12 @@ You are an expert interview coach.
 Target role:
 {selected_role}
 
+Career profile:
+{json.dumps(st.session_state.get("career_profile", {}), ensure_ascii=False)[:6000]}
+
+Job description:
+{st.session_state.job_description[:6000] or "Not provided"}
+
 Original question:
 {st.session_state.interview_question}
 
@@ -3003,6 +3375,12 @@ Analyze the candidate's final voice response.
 
 Target role:
 {selected_role}
+
+Career profile:
+{json.dumps(st.session_state.get("career_profile", {}), ensure_ascii=False)[:6000]}
+
+Job description:
+{st.session_state.job_description[:6000] or "Not provided"}
 
 Original question:
 {st.session_state.interview_question}
@@ -3223,136 +3601,54 @@ elif st.session_state.page == "CareerQuest":
     else:
         st.success("Today's mission completed! Come back tomorrow for the next streak day. 🔥")
 
-    st.html('<div class="section-title">🧩 Career Mini Games</div>')
+    st.html('<div class="section-title">🧩 Career Challenges</div>')
+    st.html("""
+    <div class="app-card">
+        <div class="card-title">🎯 Challenges built for your career</div>
+        <div class="card-text">
+            Alhomora uses your target role, resume and job description to create
+            relevant professional challenges. The challenge is not tied to a
+            fixed profession list, so any professional role can be used.
+        </div>
+    </div>
+    """)
 
     x, y, z = st.columns(3)
-    with x:
-        render_card("Debug It", "Find the issue in a short Python/code challenge.", "🐛")
-        if st.button("Play Debug It →", key="play_debug", use_container_width=True):
-            st.session_state.active_game = "Debug It"
-            st.session_state.game_question_index = 0
-            st.session_state.game_score = 0
-            st.session_state.game_finished = False
-            st.session_state.game_questions = []
-            st.rerun()
-    with y:
-        render_card("Logic Sprint", "Solve quick reasoning problems without using Gemini.", "🧠")
-        if st.button("Play Logic Sprint →", key="play_logic", use_container_width=True):
-            st.session_state.active_game = "Logic Sprint"
-            st.session_state.game_question_index = 0
-            st.session_state.game_score = 0
-            st.session_state.game_finished = False
-            st.session_state.game_questions = []
-            st.rerun()
-    with z:
-        render_card("Career Quiz", "Test knowledge connected to your target career.", "🎯")
-        if st.button("Play Career Quiz →", key="play_quiz", use_container_width=True):
-            st.session_state.active_game = "Career Quiz"
-            st.session_state.game_question_index = 0
-            st.session_state.game_score = 0
-            st.session_state.game_finished = False
-            st.session_state.game_questions = []
-            st.rerun()
-
-    debug_questions = [
-        {
-            "q": "What is wrong with this Python line?  print('Hello'",
-            "options": ["Missing closing parenthesis", "Missing import", "Invalid print function", "Nothing is wrong"],
-            "answer": 0,
-            "why": "The print call needs a closing parenthesis."
-        },
-        {
-            "q": "Which keyword is used to define a function in Python?",
-            "options": ["func", "def", "function", "define"],
-            "answer": 1,
-            "why": "Python uses the def keyword to define functions."
-        },
-        {
-            "q": "Which data structure stores key-value pairs in Python?",
-            "options": ["List", "Tuple", "Dictionary", "Set"],
-            "answer": 2,
-            "why": "A dictionary stores values against keys."
-        },
-        {
-            "q": "What is the likely problem with: x = 10 / 0 ?",
-            "options": ["SyntaxError", "TypeError", "ZeroDivisionError", "NameError"],
-            "answer": 2,
-            "why": "Division by zero raises ZeroDivisionError."
-        },
-        {
-            "q": "Which command installs a Python package from PyPI?",
-            "options": ["python add", "pip install", "package get", "py installpkg"],
-            "answer": 1,
-            "why": "pip install is the standard package installation command."
-        }
+    challenge_cards = [
+        (x, "Role Knowledge", "Test practical knowledge and decisions for your exact profession.", "🎯", "role_knowledge", "Start Role Challenge →"),
+        (y, "Real-World Scenario", "Handle a realistic workplace situation related to your target role.", "🌎", "real_world_scenario", "Start Scenario →"),
+        (z, "Professional Problem Solving", "Work through a role-specific problem and choose the strongest approach.", "🧠", "professional_problem_solving", "Start Problem Challenge →"),
     ]
 
-    logic_questions = [
-        {"q": "A sequence is 2, 4, 8, 16. What comes next?", "options": ["20", "24", "32", "36"], "answer": 2, "why": "Each number is multiplied by 2."},
-        {"q": "If all ML engineers are programmers and some programmers are designers, which statement is definitely true?", "options": ["All designers are ML engineers", "All ML engineers are programmers", "No programmer is a designer", "All programmers are ML engineers"], "answer": 1, "why": "That is the only statement directly guaranteed by the premise."},
-        {"q": "You have 3 tasks taking 10, 20 and 30 minutes. Doing the longest task first does what to total time?", "options": ["Changes total time", "Halves total time", "Does not change total work time", "Doubles total time"], "answer": 2, "why": "The order changes scheduling, not the total amount of work."},
-        {"q": "If a test fails only when input is empty, what should you inspect first?", "options": ["The empty-input validation path", "The monitor brightness", "The database password", "The CPU fan"], "answer": 0, "why": "The failure condition points directly to empty-input handling."},
-        {"q": "A project has 4 bugs. You fix 1, then 2 more appear. How many remain?", "options": ["1", "2", "3", "5"], "answer": 2, "why": "4 - 1 + 2 = 5? Wait, this exposes why careful arithmetic matters: the answer is 5."}
-    ]
-    # Correct the intentionally simple final logic question explicitly.
-    logic_questions[-1]["answer"] = 3
-
-    career_questions = {
-        "ai": [
-            {"q": "Which technique retrieves relevant documents before an LLM generates an answer?", "options": ["RAG", "CSS", "DNS", "FTP"], "answer": 0, "why": "RAG combines retrieval with generation."},
-            {"q": "What does an embedding represent?", "options": ["A vector representation of information", "A password", "A database backup", "A video codec"], "answer": 0, "why": "Embeddings represent text or other data as vectors."},
-            {"q": "Which metric is commonly used for classification?", "options": ["Accuracy", "Kilometers", "Voltage", "Frame rate only"], "answer": 0, "why": "Accuracy is a standard classification metric."},
-            {"q": "What is prompt engineering?", "options": ["Designing effective instructions for an AI model", "Building a CPU", "Encrypting a hard drive", "Installing Windows"], "answer": 0, "why": "Prompt engineering focuses on structuring model instructions."},
-            {"q": "What is overfitting?", "options": ["A model learns training data too specifically", "A server loses power", "A dataset has no rows", "A model has no parameters"], "answer": 0, "why": "Overfitting harms generalization to unseen data."}
-        ],
-        "software": [
-            {"q": "Which tool is commonly used to track source-code changes?", "options": ["Git", "Excel", "PowerPoint", "Bluetooth"], "answer": 0, "why": "Git is a version control system."},
-            {"q": "What does an API provide?", "options": ["A way for software components to communicate", "Only a user interface", "A laptop battery", "A graphics card"], "answer": 0, "why": "APIs define ways for software to interact."},
-            {"q": "What does HTTP status 404 usually mean?", "options": ["Not Found", "Success", "Unauthorized only", "Server started"], "answer": 0, "why": "404 indicates that the requested resource was not found."},
-            {"q": "Which structure follows LIFO?", "options": ["Stack", "Queue", "Graph", "Database"], "answer": 0, "why": "A stack follows last-in, first-out."},
-            {"q": "What is a unit test?", "options": ["A test of a small unit of code", "A network cable", "A deployment server", "A database table"], "answer": 0, "why": "Unit tests verify small pieces of program behavior."}
-        ],
-        "data": [
-            {"q": "What is a primary purpose of data visualization?", "options": ["Communicate patterns and insights", "Delete data", "Increase RAM", "Encrypt passwords"], "answer": 0, "why": "Visualization helps communicate patterns and findings."},
-            {"q": "Which is a supervised learning task?", "options": ["Classification with labeled data", "Random guessing", "Disk formatting", "Password hashing"], "answer": 0, "why": "Supervised learning uses labeled examples."},
-            {"q": "What does SQL primarily work with?", "options": ["Relational databases", "Audio microphones", "GPU drivers", "CSS layouts"], "answer": 0, "why": "SQL is used to query and manage relational data."},
-            {"q": "Why split data into training and test sets?", "options": ["To evaluate generalization", "To make the file prettier", "To increase screen resolution", "To remove all features"], "answer": 0, "why": "The test set helps estimate performance on unseen data."},
-            {"q": "What is a missing value?", "options": ["An absent data entry", "A GPU failure", "A web domain", "A Python package"], "answer": 0, "why": "Missing data represents an unavailable value."}
-        ],
-        "generic": [
-            {"q": "What is the main purpose of a resume?", "options": ["Present relevant qualifications and experience", "Replace an interview", "Guarantee a job", "Store passwords"], "answer": 0, "why": "A resume communicates relevant qualifications to employers."},
-            {"q": "Which behavior helps in a technical interview?", "options": ["Explain your reasoning", "Guess every answer", "Avoid clarifying questions", "Read unrelated notes"], "answer": 0, "why": "Explaining reasoning helps an interviewer understand your approach."},
-            {"q": "What makes a project bullet stronger?", "options": ["Specific action and measurable result", "Only a project title", "No technical details", "Random adjectives"], "answer": 0, "why": "Specific actions and results make achievements clearer."},
-            {"q": "What is a skill gap?", "options": ["A required skill you still need to develop", "A browser tab", "A password field", "A laptop port"], "answer": 0, "why": "A skill gap is a difference between current and required capability."},
-            {"q": "What is a useful interview practice loop?", "options": ["Answer → feedback → improve → retry", "Answer once and stop", "Skip feedback", "Only memorize definitions"], "answer": 0, "why": "Iterative practice turns feedback into improvement."}
-        ]
-    }
+    for column, title, description, icon, challenge_type, button_label in challenge_cards:
+        with column:
+            render_card(title, description, icon)
+            if st.button(button_label, key=f"play_{challenge_type}", use_container_width=True):
+                with st.spinner("Creating a challenge for your career..."):
+                    st.session_state.game_questions = generate_career_challenges(
+                        st.session_state.target_role,
+                        st.session_state.resume_text,
+                        st.session_state.job_description,
+                        st.session_state.get("career_profile", {}),
+                        challenge_type,
+                    )
+                st.session_state.active_game = title
+                st.session_state.game_question_index = 0
+                st.session_state.game_score = 0
+                st.session_state.game_finished = False
+                st.rerun()
 
     if st.session_state.active_game:
         st.html(f'<div class="section-title">🎮 {st.session_state.active_game}</div>')
 
         if not st.session_state.game_questions:
-            advanced_interview_questions = [
-                {"q": "You deployed an ML model and accuracy dropped in production. What should you investigate first?", "options": ["Data drift and production data quality", "Change the UI color", "Delete the model", "Increase monitor brightness"], "answer": 0, "why": "Production data drift or quality changes can cause a trained model to perform differently."},
-                {"q": "An API becomes slow only under heavy traffic. Which approach is most useful first?", "options": ["Measure latency and inspect bottlenecks", "Rewrite everything immediately", "Remove error handling", "Disable logging permanently"], "answer": 0, "why": "Measurement identifies the actual bottleneck before you optimize."},
-                {"q": "Your RAG system retrieves irrelevant documents. What should you examine?", "options": ["Chunking, embeddings and retrieval quality", "Only the website logo", "The keyboard layout", "The laptop wallpaper"], "answer": 0, "why": "Poor retrieval can come from chunking, embeddings, indexing or ranking choices."},
-                {"q": "A Python service works locally but fails in deployment. What is a strong first check?", "options": ["Environment variables and dependency versions", "Replace the monitor", "Delete the source code", "Increase font size"], "answer": 0, "why": "Environment and dependency differences are common causes of deployment failures."},
-                {"q": "In an interview, you do not know an answer. What is the strongest response?", "options": ["Explain what you know, reason through it, and state how you would verify the unknown", "Invent a confident answer", "Stay silent", "Change the topic"], "answer": 0, "why": "Good engineering communication shows reasoning, honesty and a verification strategy."},
-            ]
-            if st.session_state.active_game == "Debug It":
-                st.session_state.game_questions = debug_questions
-            elif st.session_state.active_game == "Logic Sprint":
-                st.session_state.game_questions = logic_questions
-            elif st.session_state.active_game == "Advanced Interview Challenge":
-                st.session_state.game_questions = advanced_interview_questions
-            else:
-                role = (st.session_state.target_role or "").lower()
-                if any(x in role for x in ["ai", "ml", "machine", "data"]):
-                    st.session_state.game_questions = career_questions["ai"] if "ai" in role or "ml" in role or "machine" in role else career_questions["data"]
-                elif any(x in role for x in ["software", "developer", "web", "backend", "frontend"]):
-                    st.session_state.game_questions = career_questions["software"]
-                else:
-                    st.session_state.game_questions = career_questions["generic"]
+            st.session_state.game_questions = generate_career_challenges(
+                st.session_state.target_role,
+                st.session_state.resume_text,
+                st.session_state.job_description,
+                st.session_state.get("career_profile", {}),
+                "role_knowledge",
+            )
 
         if not st.session_state.game_finished:
             idx = st.session_state.game_question_index
@@ -3385,13 +3681,20 @@ elif st.session_state.page == "CareerQuest":
             total = len(st.session_state.game_questions)
             xp_earned = score * 10
             st.success(f"Challenge complete! You scored {score}/{total} and earned {xp_earned} XP. 🏆")
-            render_metric("Game Score", f"{score}/{total}", "Correct answers")
+            render_metric("Challenge Score", f"{score}/{total}", "Correct answers")
             if st.button("Play Again", key="game_again", use_container_width=True):
                 st.session_state.game_question_index = 0
                 st.session_state.game_score = 0
                 st.session_state.game_finished = False
+                st.session_state.game_questions = generate_career_challenges(
+                    st.session_state.target_role,
+                    st.session_state.resume_text,
+                    st.session_state.job_description,
+                    st.session_state.get("career_profile", {}),
+                    "role_knowledge",
+                )
                 st.rerun()
-            if st.button("Close Game", key="game_close", use_container_width=True):
+            if st.button("Close Challenge", key="game_close", use_container_width=True):
                 st.session_state.active_game = ""
                 st.session_state.game_questions = []
                 st.session_state.game_question_index = 0
@@ -3399,57 +3702,6 @@ elif st.session_state.page == "CareerQuest":
                 st.session_state.game_finished = False
                 st.rerun()
 
-    st.html('<div class="section-title">🎁 Career Rewards</div>')
-    # Always derive reward state from the persisted XP. This prevents a reward
-    # from appearing unlocked in one session and locked after login.
-    st.session_state.unlocked_rewards = reward_ids_for_xp(st.session_state.career_xp)
-
-    reward_lookup = {reward_id: name for _, reward_id, name in REWARD_DEFINITIONS}
-    unlocked_rewards = set(st.session_state.unlocked_rewards)
-
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-        unlocked = "advanced_resume_template" in unlocked_rewards
-        status = "Unlocked" if unlocked else "Requires 200 XP"
-        render_card(
-            "Advanced Resume Template",
-            f"A clean, ATS-friendly career resume structure. {status}.",
-            "📄"
-        )
-        if unlocked:
-            if st.button("📄 Open Reward", key="open_resume_reward", use_container_width=True):
-                st.session_state.active_reward = "advanced_resume_template"
-                st.rerun()
-
-    with c2:
-        unlocked = "advanced_interview_challenge" in unlocked_rewards
-        status = "Unlocked" if unlocked else "Requires 400 XP"
-        render_card(
-            "Advanced Interview Challenge",
-            f"A harder local career challenge for engineering judgement. {status}.",
-            "🎙"
-        )
-        if unlocked:
-            if st.button("🎙 Open Reward", key="open_interview_reward", use_container_width=True):
-                st.session_state.active_reward = "advanced_interview_challenge"
-                st.rerun()
-
-    with c3:
-        unlocked = "career_mastery_badge" in unlocked_rewards
-        status = "Unlocked" if unlocked else "Requires 600 XP"
-        render_card(
-            "Career Mastery Badge",
-            f"A downloadable achievement badge for reaching 600 Career XP. {status}.",
-            "🏆"
-        )
-        if unlocked:
-            if st.button("🏆 Open Reward", key="open_badge_reward", use_container_width=True):
-                st.session_state.active_reward = "career_mastery_badge"
-                st.rerun()
-
-    # Actual reward actions. These are deliberately outside the decorative
-    # cards so every unlocked reward has an unmistakable working action.
     active_reward = st.session_state.get("active_reward", "")
     if active_reward and active_reward not in unlocked_rewards:
         st.session_state.active_reward = ""
